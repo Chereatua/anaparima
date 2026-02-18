@@ -1374,10 +1374,11 @@ html[lang="fr"] .lang-en { display: none !important; }
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        gap: var(--spacing-md);
+        gap: 1.25rem;
         background: var(--color-primary-dark);
         backdrop-filter: blur(10px);
-        padding: var(--spacing-lg);
+        padding: 5rem 2rem 2rem;
+        overflow-y: auto;
         transform: translateY(-100%);
         opacity: 0;
         visibility: hidden;
