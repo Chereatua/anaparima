@@ -1375,7 +1375,7 @@ html[lang="fr"] .lang-en { display: none !important; }
         justify-content: center;
         align-items: center;
         gap: var(--spacing-md);
-        background: rgba(255, 255, 255, 0.98);
+        background: var(--color-primary-dark);
         backdrop-filter: blur(10px);
         padding: var(--spacing-lg);
         transform: translateY(-100%);
@@ -1391,8 +1391,28 @@ html[lang="fr"] .lang-en { display: none !important; }
         visibility: visible;
     }
 
-    .nav-link {
+    .nav-menu .nav-link {
         font-size: 1.25rem;
+        color: var(--color-white);
+    }
+
+    .nav-menu .nav-link:hover,
+    .nav-menu .nav-link.active {
+        color: var(--color-secondary);
+    }
+
+    .nav-menu .btn-contact {
+        background: var(--color-secondary);
+        color: var(--color-white);
+    }
+
+    .nav-menu .lang-toggle {
+        color: var(--color-white);
+        border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .menu-toggle.active span {
+        background: var(--color-white);
     }
 
     .menu-toggle {
