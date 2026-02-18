@@ -1391,24 +1391,33 @@ html[lang="fr"] .lang-en { display: none !important; }
         visibility: visible;
     }
 
-    .nav-menu .nav-link {
+    .nav-menu .nav-link,
+    .nav-menu li .nav-link {
         font-size: 1.25rem;
-        color: var(--color-white);
+        color: var(--color-white) !important;
     }
 
     .nav-menu .nav-link:hover,
     .nav-menu .nav-link.active {
-        color: var(--color-secondary);
+        color: var(--color-secondary) !important;
     }
 
-    .nav-menu .btn-contact {
-        background: var(--color-secondary);
-        color: var(--color-white);
+    .nav-menu .btn-contact,
+    .nav-menu li .btn-contact {
+        background: var(--color-secondary) !important;
+        color: var(--color-white) !important;
+        padding: 0.75rem 2rem;
+        border-radius: 30px;
     }
 
     .nav-menu .lang-toggle {
-        color: var(--color-white);
-        border-color: rgba(255, 255, 255, 0.3);
+        color: var(--color-white) !important;
+        border-color: rgba(255, 255, 255, 0.4);
+    }
+
+    .nav-menu .lang-toggle:hover {
+        background: var(--color-secondary);
+        border-color: var(--color-secondary);
     }
 
     .menu-toggle.active span {
