@@ -12,9 +12,15 @@
     <!-- Open Graph pour réseaux sociaux -->
     <meta property="og:title" content="ANAPA RIMA - Massage Bien-Être à Tahiti">
     <meta property="og:description" content="Massages bien-être à domicile à Tahiti dès 6 500 XPF. Californien, Tui Na, Abhyanga, Rituel Tahitien, Réflexologie. Déplacements Mahina-début Paea. Réservez par WhatsApp au (+689) 89 51 53 62.">
-    <meta property="og:image" content="./img/hero-bg.jpg">
+    <meta property="og:image" content="https://www.anaparima.pf/img/hero-bg.jpg">
+    <meta property="og:url" content="https://www.anaparima.pf/">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="fr_PF">
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="ANAPA RIMA - Massage Bien-Être à Tahiti">
+    <meta name="twitter:description" content="Massages bien-être à domicile à Tahiti dès 6 500 XPF.">
+    <meta name="twitter:image" content="https://www.anaparima.pf/img/hero-bg.jpg">
 
     <!-- Geo tags pour SEO local Tahiti -->
     <meta name="geo.region" content="PF">
@@ -34,13 +40,13 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 
     <link rel="stylesheet" href="styles.css">
-    <!-- EmailJS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <!-- Google reCAPTCHA v2 -->
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+    <!-- EmailJS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js" defer></script>
+    <!-- Google reCAPTCHA v2 -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 
     <!-- Schema.org JSON-LD pour SEO local -->
     <script type="application/ld+json">
@@ -77,7 +83,7 @@
         "sameAs": [
             "https://www.instagram.com/anapa_rima_massages/"
         ],
-        "image": "./img/hero-bg.jpg"
+        "image": "https://www.anaparima.pf/img/hero-bg.jpg"
     }
     </script>
 </head>
@@ -792,8 +798,7 @@
 
                         <div class="form-group">
                             <label for="message">Message</label>
-                            <textarea id="message" name="message" rows="4" class="lang-fr" placeholder="Précisez vos disponibilités, besoins particuliers..."></textarea>
-                            <textarea id="message-en" name="message" rows="4" class="lang-en" placeholder="Please specify your availability, special needs..."></textarea>
+                            <textarea id="message" name="message" rows="4" placeholder="Précisez vos disponibilités, besoins particuliers..." data-placeholder-fr="Précisez vos disponibilités, besoins particuliers..." data-placeholder-en="Please specify your availability, special needs..."></textarea>
                         </div>
 
                         <!-- reCAPTCHA -->
