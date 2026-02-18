@@ -20,6 +20,11 @@ if (langToggle) {
                 if (options[i] !== undefined) opt.textContent = options[i];
             });
         });
+
+        // Traduire les placeholders des textareas
+        document.querySelectorAll('textarea[data-placeholder-fr]').forEach(textarea => {
+            textarea.placeholder = textarea.getAttribute('data-placeholder-' + newLang) || textarea.placeholder;
+        });
     });
 }
 
@@ -39,13 +44,24 @@ window.addEventListener('scroll', () => {
 const menuToggle = document.getElementById('menuToggle');
 const navMenu = document.getElementById('navMenu');
 
-menuToggle.addEventListener('click', () => {
-    const isActive = menuToggle.classList.toggle('active');
-    navMenu.classList.toggle('active');
-    menuToggle.setAttribute('aria-expanded', isActive);
-    // Prevent body scroll when menu is open
-    document.body.style.overflow = isActive ? 'hidden' : '';
-});
+if (menuToggle) {
+    menuToggle.addEventListener('click', () => {
+        const isActive = menuToggle.classList.toggle('active');
+        navMenu.classList.toggle('active');
+        menuToggle.setAttribute('aria-expanded', isActive);
+        document.body.style.overflow = isActive ? 'hidden' : '';
+    });
+
+    // Fermer le menu mobile avec Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && navMenu.classList.contains('active')) {
+            menuToggle.classList.remove('active');
+            navMenu.classList.remove('active');
+            menuToggle.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        }
+    });
+}
 
 // Fermer le menu mobile au clic sur un lien
 navLinks.forEach(link => {
@@ -132,8 +148,13 @@ animatedElements.forEach(el => {
 });
 
 // === EMAILJS INITIALISATION ===
-// IMPORTANT : Remplacer par votre clé publique EmailJS
-emailjs.init('wMBs2gMN4TZDvobpx');
+try {
+    if (typeof emailjs !== 'undefined') {
+        emailjs.init('wMBs2gMN4TZDvobpx');
+    }
+} catch (err) {
+    console.warn('EmailJS non disponible:', err);
+}
 
 // === FORMULAIRE DE CONTACT ===
 const contactForm = document.getElementById('contactForm');
@@ -253,13 +274,11 @@ function showFormError(message) {
 const hero = document.querySelector('.hero');
 
 // === SMOOTH REVEAL ON PAGE LOAD ===
+document.body.classList.add('js-loading');
 window.addEventListener('load', () => {
-    document.body.style.opacity = '1';
-    document.body.style.transition = 'opacity 0.5s ease';
+    document.body.classList.remove('js-loading');
+    document.body.classList.add('js-loaded');
 });
-
-// Initialement masqué
-document.body.style.opacity = '0';
 
 // === GALLERY HOVER EFFECT ===
 const galleryItems = document.querySelectorAll('.gallery-item');
@@ -279,25 +298,6 @@ const serviceCards = document.querySelectorAll('.service-card');
 
 serviceCards.forEach((card, index) => {
     card.style.transitionDelay = `${index * 0.1}s`;
-});
-
-// === PRICING CARDS HOVER EFFECT ===
-const pricingCards = document.querySelectorAll('.pricing-card');
-
-pricingCards.forEach(card => {
-    card.addEventListener('mouseenter', () => {
-        pricingCards.forEach(otherCard => {
-            if (otherCard !== card) {
-                otherCard.style.opacity = '0.6';
-            }
-        });
-    });
-    
-    card.addEventListener('mouseleave', () => {
-        pricingCards.forEach(otherCard => {
-            otherCard.style.opacity = '1';
-        });
-    });
 });
 
 // === CONSOLE LOG PERSONNALISÉ ===
