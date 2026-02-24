@@ -148,13 +148,24 @@ animatedElements.forEach(el => {
 });
 
 // === EMAILJS INITIALISATION ===
-try {
+// Initialisation différée : le SDK est chargé avec defer, il peut ne pas être prêt ici.
+// On initialise dès que possible, et on ré-essaie avant l'envoi si nécessaire.
+let emailjsReady = false;
+
+function initEmailJS() {
+    if (emailjsReady) return true;
     if (typeof emailjs !== 'undefined') {
         emailjs.init('wMBs2gMN4TZDvobpx');
+        emailjsReady = true;
+        return true;
     }
-} catch (err) {
-    console.warn('EmailJS non disponible:', err);
+    return false;
 }
+
+// Tenter l'init immédiatement
+initEmailJS();
+// Retenter après le chargement complet de la page
+window.addEventListener('load', initEmailJS);
 
 // === FORMULAIRE DE CONTACT ===
 const contactForm = document.getElementById('contactForm');
@@ -228,7 +239,10 @@ contactForm.addEventListener('submit', async (e) => {
     };
 
     try {
-        // IMPORTANT : Remplacer 'VOTRE_SERVICE_ID' et 'VOTRE_TEMPLATE_ID' par vos identifiants EmailJS
+        // S'assurer qu'EmailJS est initialisé avant l'envoi
+        if (!initEmailJS()) {
+            throw new Error('EmailJS non chargé');
+        }
         await emailjs.send('service_cl58eoh', 'template_yjtvc9i', templateParams);
 
         // Succès : masquer le formulaire et afficher la confirmation
@@ -357,6 +371,238 @@ accessibilityStyle.textContent = `
     }
 `;
 document.head.appendChild(accessibilityStyle);
+
+// === AGENDA GOOGLE CALENDAR API ===
+(() => {
+    const GCAL_API_KEY = 'AIzaSyBXebmEFqubgjilMcmG86LHKbzWgeZugZU';
+    const GCAL_CALENDAR_ID = 'anaparima.massages@gmail.com';
+    const HOUR_START = 7;
+    const HOUR_END = 19;
+
+    const agendaWeekEl = document.getElementById('agendaWeek');
+    const agendaListEl = document.getElementById('agendaList');
+    const agendaLoading = document.getElementById('agendaLoading');
+    const agendaError = document.getElementById('agendaError');
+    const agendaWeekLabel = document.getElementById('agendaWeekLabel');
+    const agendaPrev = document.getElementById('agendaPrev');
+    const agendaNext = document.getElementById('agendaNext');
+
+    if (!agendaWeekEl) return;
+
+    const lang = () => document.documentElement.getAttribute('lang') || 'fr';
+
+    const DAYS_FR = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+    const DAYS_EN = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const DAYS_SHORT_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    const DAYS_SHORT_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+    let currentWeekStart = getMonday(new Date());
+
+    function getMonday(d) {
+        const date = new Date(d);
+        const day = date.getDay();
+        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+        date.setDate(diff);
+        date.setHours(0, 0, 0, 0);
+        return date;
+    }
+
+    function formatWeekLabel(monday) {
+        const sunday = new Date(monday);
+        sunday.setDate(sunday.getDate() + 6);
+        const l = lang();
+        const months = l === 'fr' ? MONTHS_FR : MONTHS_EN;
+        const dStart = monday.getDate();
+        const mStart = months[monday.getMonth()];
+        const dEnd = sunday.getDate();
+        const mEnd = months[sunday.getMonth()];
+        const year = sunday.getFullYear();
+        if (monday.getMonth() === sunday.getMonth()) {
+            return `${dStart} – ${dEnd} ${mStart} ${year}`;
+        }
+        return `${dStart} ${mStart} – ${dEnd} ${mEnd} ${year}`;
+    }
+
+    function formatTime(dateStr) {
+        const d = new Date(dateStr);
+        return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Pacific/Tahiti' });
+    }
+
+    function isSameDay(d1, d2) {
+        return d1.getFullYear() === d2.getFullYear() &&
+               d1.getMonth() === d2.getMonth() &&
+               d1.getDate() === d2.getDate();
+    }
+
+    function isToday(d) {
+        return isSameDay(d, new Date());
+    }
+
+    async function fetchEvents(weekStart) {
+        const timeMin = new Date(weekStart);
+        const timeMax = new Date(weekStart);
+        timeMax.setDate(timeMax.getDate() + 7);
+
+        const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GCAL_CALENDAR_ID)}/events?` +
+            `key=${GCAL_API_KEY}` +
+            `&timeMin=${timeMin.toISOString()}` +
+            `&timeMax=${timeMax.toISOString()}` +
+            `&singleEvents=true` +
+            `&orderBy=startTime` +
+            `&timeZone=Pacific/Tahiti`;
+
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`API error ${resp.status}`);
+        const data = await resp.json();
+        return data.items || [];
+    }
+
+    function getEventsForDay(events, dayDate) {
+        return events.filter(ev => {
+            const start = new Date(ev.start.dateTime || ev.start.date);
+            return isSameDay(start, dayDate);
+        }).filter(ev => {
+            // Filtrer les événements hors plage horaire
+            if (ev.start.dateTime) {
+                const h = new Date(ev.start.dateTime).getHours();
+                return h >= HOUR_START && h < HOUR_END;
+            }
+            return true; // Événements "toute la journée"
+        });
+    }
+
+    function renderWeekView(events) {
+        agendaWeekEl.innerHTML = '';
+        const l = lang();
+        const dayNames = l === 'fr' ? DAYS_SHORT_FR : DAYS_SHORT_EN;
+        const freeText = l === 'fr' ? 'Libre' : 'Free';
+
+        for (let i = 0; i < 7; i++) {
+            const dayDate = new Date(currentWeekStart);
+            dayDate.setDate(dayDate.getDate() + i);
+
+            const dayEl = document.createElement('div');
+            dayEl.className = 'agenda-day' + (isToday(dayDate) ? ' today' : '');
+
+            const dayEvents = getEventsForDay(events, dayDate);
+
+            dayEl.innerHTML = `
+                <div class="agenda-day-header">
+                    <div class="agenda-day-name">${dayNames[dayDate.getDay()]}</div>
+                    <div class="agenda-day-number">${dayDate.getDate()}</div>
+                </div>
+                <div class="agenda-day-events">
+                    ${dayEvents.length > 0
+                        ? dayEvents.map(ev => `
+                            <div class="agenda-event">
+                                <span class="agenda-event-time">${ev.start.dateTime ? formatTime(ev.start.dateTime) + ' – ' + formatTime(ev.end.dateTime) : (l === 'fr' ? 'Journée' : 'All day')}</span>
+                                ${ev.summary ? `<span class="agenda-event-title">${ev.summary}</span>` : ''}
+                            </div>
+                        `).join('')
+                        : `<div class="agenda-day-free">${freeText}</div>`
+                    }
+                </div>
+            `;
+
+            agendaWeekEl.appendChild(dayEl);
+        }
+    }
+
+    function renderListView(events) {
+        agendaListEl.innerHTML = '';
+        const l = lang();
+        const dayNames = l === 'fr' ? DAYS_FR : DAYS_EN;
+        const months = l === 'fr' ? MONTHS_FR : MONTHS_EN;
+        const freeText = l === 'fr' ? 'Aucun rendez-vous' : 'No appointments';
+        const todayText = l === 'fr' ? "Aujourd'hui" : 'Today';
+
+        for (let i = 0; i < 7; i++) {
+            const dayDate = new Date(currentWeekStart);
+            dayDate.setDate(dayDate.getDate() + i);
+
+            const dayEvents = getEventsForDay(events, dayDate);
+            const today = isToday(dayDate);
+
+            const dayEl = document.createElement('div');
+            dayEl.className = 'agenda-list-day' + (today ? ' today' : '');
+
+            dayEl.innerHTML = `
+                <div class="agenda-list-header">
+                    ${dayNames[dayDate.getDay()]} ${dayDate.getDate()} ${months[dayDate.getMonth()]}
+                    ${today ? `<span class="today-badge">${todayText}</span>` : ''}
+                </div>
+                ${dayEvents.length > 0
+                    ? dayEvents.map(ev => `
+                        <div class="agenda-list-event">
+                            <span class="agenda-list-time">${ev.start.dateTime ? formatTime(ev.start.dateTime) + ' – ' + formatTime(ev.end.dateTime) : (l === 'fr' ? 'Journée' : 'All day')}</span>
+                            ${ev.summary ? `<span class="agenda-list-title">${ev.summary}</span>` : ''}
+                        </div>
+                    `).join('')
+                    : `<div class="agenda-list-free">${freeText}</div>`
+                }
+            `;
+
+            agendaListEl.appendChild(dayEl);
+        }
+    }
+
+    async function loadWeek() {
+        agendaLoading.style.display = 'flex';
+        agendaError.style.display = 'none';
+        agendaWeekEl.innerHTML = '';
+        agendaListEl.innerHTML = '';
+        agendaWeekLabel.textContent = formatWeekLabel(currentWeekStart);
+
+        try {
+            const events = await fetchEvents(currentWeekStart);
+            agendaLoading.style.display = 'none';
+            renderWeekView(events);
+            renderListView(events);
+        } catch (err) {
+            console.error('Erreur agenda:', err);
+            agendaLoading.style.display = 'none';
+            agendaError.style.display = 'block';
+        }
+    }
+
+    const thisWeekMonday = getMonday(new Date());
+
+    function updatePrevButton() {
+        const isPastOrCurrent = currentWeekStart <= thisWeekMonday;
+        agendaPrev.disabled = isPastOrCurrent;
+        agendaPrev.style.opacity = isPastOrCurrent ? '0.3' : '1';
+        agendaPrev.style.cursor = isPastOrCurrent ? 'default' : 'pointer';
+    }
+
+    agendaPrev.addEventListener('click', () => {
+        const prevWeek = new Date(currentWeekStart);
+        prevWeek.setDate(prevWeek.getDate() - 7);
+        if (prevWeek < thisWeekMonday) return;
+        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+        updatePrevButton();
+        loadWeek();
+    });
+
+    agendaNext.addEventListener('click', () => {
+        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+        updatePrevButton();
+        loadWeek();
+    });
+
+    // Recharger quand on change de langue
+    const langToggleBtn = document.getElementById('langToggle');
+    if (langToggleBtn) {
+        langToggleBtn.addEventListener('click', () => {
+            setTimeout(loadWeek, 50);
+        });
+    }
+
+    // Charger la semaine courante
+    updatePrevButton();
+    loadWeek();
+})();
 
 // === PRÉCHARGEMENT DES SECTIONS AU HOVER ===
 navLinks.forEach(link => {
