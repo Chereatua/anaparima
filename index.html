@@ -12,15 +12,15 @@
     <!-- Open Graph pour réseaux sociaux -->
     <meta property="og:title" content="ANAPA RIMA - Massage Bien-Être à Tahiti">
     <meta property="og:description" content="Massages bien-être à domicile à Tahiti dès 6 500 XPF. Californien, Tui Na, Abhyanga, Rituel Tahitien, Réflexologie. Déplacements Mahina-début Paea. Réservez par WhatsApp au (+689) 89 51 53 62.">
-    <meta property="og:image" content="https://www.anaparima.pf/img/hero-bg.jpg">
-    <meta property="og:url" content="https://www.anaparima.pf/">
+    <meta property="og:image" content="https://www.anapa-rima.com/img/hero-bg.jpg">
+    <meta property="og:url" content="https://www.anapa-rima.com/">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="fr_PF">
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="ANAPA RIMA - Massage Bien-Être à Tahiti">
     <meta name="twitter:description" content="Massages bien-être à domicile à Tahiti dès 6 500 XPF.">
-    <meta name="twitter:image" content="https://www.anaparima.pf/img/hero-bg.jpg">
+    <meta name="twitter:image" content="https://www.anapa-rima.com/img/hero-bg.jpg">
 
     <!-- Geo tags pour SEO local Tahiti -->
     <meta name="geo.region" content="PF">
@@ -32,7 +32,7 @@
     <meta name="author" content="Victoria Paret - ANAPA RIMA">
     <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#2d4a3e">
-    <link rel="canonical" href="https://www.anaparima.pf/">
+    <link rel="canonical" href="https://www.anapa-rima.com/">
 
     <!-- Favicons -->
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
@@ -55,7 +55,7 @@
         "@type": "HealthAndBeautyBusiness",
         "name": "ANAPA RIMA - Massages Bien-Être",
         "description": "Massages bien-être à domicile à Tahiti. Massage californien, réflexologie plantaire, massage chinois Tui Na, Abhyanga, rituel tahitien.",
-        "url": "https://www.anaparima.pf",
+        "url": "https://www.anapa-rima.com",
         "telephone": "+689-89-51-53-62",
         "email": "anaparima.massages@gmail.com",
         "address": {
@@ -83,7 +83,7 @@
         "sameAs": [
             "https://www.instagram.com/anapa_rima_massages/"
         ],
-        "image": "https://www.anaparima.pf/img/hero-bg.jpg"
+        "image": "https://www.anapa-rima.com/img/hero-bg.jpg"
     }
     </script>
 </head>
@@ -119,6 +119,9 @@
                 </a></li>
                 <li><a href="#galerie" class="nav-link">
                     <span class="lang-fr">Galerie</span><span class="lang-en">Gallery</span>
+                </a></li>
+                <li><a href="#agenda" class="nav-link">
+                    <span class="lang-fr">Agenda</span><span class="lang-en">Schedule</span>
                 </a></li>
                 <li><a href="#contact" class="nav-link btn-contact">
                     <span class="lang-fr">Réserver</span><span class="lang-en">Book</span>
@@ -662,6 +665,54 @@
         </div>
     </section>
 
+    <!-- Agenda / Disponibilités -->
+    <section class="agenda" id="agenda" aria-labelledby="agenda-title">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-label lang-fr">Disponibilités</span>
+                <span class="section-label lang-en">Availability</span>
+                <h2 class="section-title" id="agenda-title">
+                    <span class="lang-fr">Mon Agenda</span>
+                    <span class="lang-en">My Schedule</span>
+                </h2>
+                <p class="agenda-subtitle lang-fr">Consultez mes créneaux disponibles puis réservez via WhatsApp ou le formulaire de contact.</p>
+                <p class="agenda-subtitle lang-en">Check my available slots then book via WhatsApp or the contact form.</p>
+            </div>
+            <!-- Navigation semaine -->
+            <div class="agenda-nav">
+                <button class="agenda-nav-btn" id="agendaPrev" aria-label="Semaine précédente">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <span class="agenda-week-label" id="agendaWeekLabel"></span>
+                <button class="agenda-nav-btn" id="agendaNext" aria-label="Semaine suivante">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+            </div>
+
+            <!-- Vue semaine (desktop) -->
+            <div class="agenda-week" id="agendaWeek"></div>
+
+            <!-- Vue liste (mobile) -->
+            <div class="agenda-list" id="agendaList"></div>
+
+            <!-- Loading & erreur -->
+            <div class="agenda-loading" id="agendaLoading">
+                <svg class="spinner" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="31.4 31.4" stroke-linecap="round"/>
+                </svg>
+                <span class="lang-fr">Chargement des disponibilités...</span>
+                <span class="lang-en">Loading availability...</span>
+            </div>
+            <div class="agenda-error" id="agendaError" style="display:none;">
+                <span class="lang-fr">Impossible de charger l'agenda. Contactez-moi directement par WhatsApp.</span>
+                <span class="lang-en">Unable to load schedule. Please contact me directly via WhatsApp.</span>
+            </div>
+
+            <p class="agenda-note lang-fr">Les créneaux colorés indiquent les rendez-vous déjà pris. Pour réserver, contactez-moi par WhatsApp ou via le formulaire ci-dessous.</p>
+            <p class="agenda-note lang-en">Colored slots indicate booked appointments. To book, contact me via WhatsApp or the form below.</p>
+        </div>
+    </section>
+
     <!-- Contact Section -->
     <section class="contact" id="contact" aria-labelledby="contact-title">
         <div class="container">
@@ -872,6 +923,7 @@
                         <li><a href="#prestations"><span class="lang-fr">Prestations</span><span class="lang-en">Services</span></a></li>
                         <li><a href="#bienfaits"><span class="lang-fr">Bienfaits</span><span class="lang-en">Benefits</span></a></li>
                         <li><a href="#galerie"><span class="lang-fr">Galerie</span><span class="lang-en">Gallery</span></a></li>
+                        <li><a href="#agenda"><span class="lang-fr">Agenda</span><span class="lang-en">Schedule</span></a></li>
                     </ul>
                 </nav>
 
@@ -887,6 +939,7 @@
 
             <div class="footer-bottom">
                 <p>&copy; 2026 ANAPĀ RIMA - Massages Bien-Être à Tahiti</p>
+                <p class="footer-legal">N°Tahiti G37055</p>
             </div>
         </div>
     </footer>
