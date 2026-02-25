@@ -440,6 +440,14 @@ document.head.appendChild(accessibilityStyle);
         return isSameDay(d, new Date());
     }
 
+    function isPast(d) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const check = new Date(d);
+        check.setHours(0, 0, 0, 0);
+        return check < today;
+    }
+
     async function fetchEvents(weekStart) {
         const timeMin = new Date(weekStart);
         const timeMax = new Date(weekStart);
@@ -464,29 +472,64 @@ document.head.appendChild(accessibilityStyle);
             const start = new Date(ev.start.dateTime || ev.start.date);
             return isSameDay(start, dayDate);
         }).filter(ev => {
-            // Filtrer les événements hors plage horaire
             if (ev.start.dateTime) {
                 const h = new Date(ev.start.dateTime).getHours();
                 return h >= HOUR_START && h < HOUR_END;
             }
-            return true; // Événements "toute la journée"
+            return true;
         });
+    }
+
+    // Génère les créneaux de la journée (7h-19h), fusionne les consécutifs de même statut
+    function buildTimeSlots(dayEvents) {
+        const slots = [];
+        for (let h = HOUR_START; h < HOUR_END; h++) {
+            slots.push({ hour: h, busy: false });
+        }
+        dayEvents.forEach(ev => {
+            if (!ev.start.dateTime) {
+                slots.forEach(s => { s.busy = true; });
+                return;
+            }
+            const startH = new Date(ev.start.dateTime).getHours();
+            const endH = new Date(ev.end.dateTime).getHours();
+            const endM = new Date(ev.end.dateTime).getMinutes();
+            for (let h = startH; h < endH + (endM > 0 ? 1 : 0); h++) {
+                const slot = slots.find(s => s.hour === h);
+                if (slot) slot.busy = true;
+            }
+        });
+        // Fusionner les créneaux consécutifs de même statut
+        const merged = [];
+        for (const slot of slots) {
+            const last = merged[merged.length - 1];
+            if (last && last.busy === slot.busy) {
+                last.endHour = slot.hour + 1;
+            } else {
+                merged.push({ startHour: slot.hour, endHour: slot.hour + 1, busy: slot.busy });
+            }
+        }
+        return merged;
     }
 
     function renderWeekView(events) {
         agendaWeekEl.innerHTML = '';
         const l = lang();
         const dayNames = l === 'fr' ? DAYS_SHORT_FR : DAYS_SHORT_EN;
-        const freeText = l === 'fr' ? 'Libre' : 'Free';
+        const availText = l === 'fr' ? 'Disponible' : 'Available';
+        const busyText = l === 'fr' ? 'Occupée' : 'Booked';
 
         for (let i = 0; i < 7; i++) {
             const dayDate = new Date(currentWeekStart);
             dayDate.setDate(dayDate.getDate() + i);
 
+            const past = isPast(dayDate);
             const dayEl = document.createElement('div');
-            dayEl.className = 'agenda-day' + (isToday(dayDate) ? ' today' : '');
+            dayEl.className = 'agenda-day' + (isToday(dayDate) ? ' today' : '') + (past ? ' past' : '');
 
             const dayEvents = getEventsForDay(events, dayDate);
+            const slots = buildTimeSlots(dayEvents);
+            const passedText = l === 'fr' ? 'Passé' : 'Past';
 
             dayEl.innerHTML = `
                 <div class="agenda-day-header">
@@ -494,14 +537,14 @@ document.head.appendChild(accessibilityStyle);
                     <div class="agenda-day-number">${dayDate.getDate()}</div>
                 </div>
                 <div class="agenda-day-events">
-                    ${dayEvents.length > 0
-                        ? dayEvents.map(ev => `
-                            <div class="agenda-event">
-                                <span class="agenda-event-time">${ev.start.dateTime ? formatTime(ev.start.dateTime) + ' – ' + formatTime(ev.end.dateTime) : (l === 'fr' ? 'Journée' : 'All day')}</span>
-                                ${ev.summary ? `<span class="agenda-event-title">${ev.summary}</span>` : ''}
+                    ${past
+                        ? `<div class="agenda-day-passed">${passedText}</div>`
+                        : slots.map(slot => `
+                            <div class="agenda-slot ${slot.busy ? 'slot-busy' : 'slot-free'}">
+                                <span class="agenda-slot-time">${slot.startHour}h – ${slot.endHour}h</span>
+                                <span class="agenda-slot-status">${slot.busy ? busyText : availText}</span>
                             </div>
                         `).join('')
-                        : `<div class="agenda-day-free">${freeText}</div>`
                     }
                 </div>
             `;
@@ -515,15 +558,21 @@ document.head.appendChild(accessibilityStyle);
         const l = lang();
         const dayNames = l === 'fr' ? DAYS_FR : DAYS_EN;
         const months = l === 'fr' ? MONTHS_FR : MONTHS_EN;
-        const freeText = l === 'fr' ? 'Aucun rendez-vous' : 'No appointments';
         const todayText = l === 'fr' ? "Aujourd'hui" : 'Today';
+        const availText = l === 'fr' ? 'Disponible' : 'Available';
+        const busyText = l === 'fr' ? 'Occupée' : 'Booked';
 
         for (let i = 0; i < 7; i++) {
             const dayDate = new Date(currentWeekStart);
             dayDate.setDate(dayDate.getDate() + i);
 
             const dayEvents = getEventsForDay(events, dayDate);
+            const slots = buildTimeSlots(dayEvents);
             const today = isToday(dayDate);
+            const past = isPast(dayDate);
+
+            // Ne pas afficher les jours passés en vue liste
+            if (past) continue;
 
             const dayEl = document.createElement('div');
             dayEl.className = 'agenda-list-day' + (today ? ' today' : '');
@@ -533,15 +582,12 @@ document.head.appendChild(accessibilityStyle);
                     ${dayNames[dayDate.getDay()]} ${dayDate.getDate()} ${months[dayDate.getMonth()]}
                     ${today ? `<span class="today-badge">${todayText}</span>` : ''}
                 </div>
-                ${dayEvents.length > 0
-                    ? dayEvents.map(ev => `
-                        <div class="agenda-list-event">
-                            <span class="agenda-list-time">${ev.start.dateTime ? formatTime(ev.start.dateTime) + ' – ' + formatTime(ev.end.dateTime) : (l === 'fr' ? 'Journée' : 'All day')}</span>
-                            ${ev.summary ? `<span class="agenda-list-title">${ev.summary}</span>` : ''}
-                        </div>
-                    `).join('')
-                    : `<div class="agenda-list-free">${freeText}</div>`
-                }
+                ${slots.map(slot => `
+                    <div class="agenda-list-event ${slot.busy ? 'slot-busy' : 'slot-free'}">
+                        <span class="agenda-list-time">${slot.startHour}h – ${slot.endHour}h</span>
+                        <span class="agenda-list-status">${slot.busy ? busyText : availText}</span>
+                    </div>
+                `).join('')}
             `;
 
             agendaListEl.appendChild(dayEl);
