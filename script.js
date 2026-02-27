@@ -76,9 +76,12 @@ navLinks.forEach(link => {
 // === SMOOTH SCROLL ===
 navLinks.forEach(link => {
     link.addEventListener('click', (e) => {
-        e.preventDefault();
         const targetId = link.getAttribute('href');
-        
+
+        // Ne bloquer que les liens ancre (#), laisser les liens vers d'autres pages
+        if (!targetId || !targetId.startsWith('#')) return;
+
+        e.preventDefault();
         if (targetId.startsWith('#')) {
             const targetSection = document.querySelector(targetId);
             if (targetSection) {
