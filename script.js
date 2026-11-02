@@ -119,37 +119,6 @@ const updateActiveLink = () => {
 
 window.addEventListener('scroll', updateActiveLink);
 
-// === SCROLL ANIMATIONS ===
-const observerOptions = {
-    threshold: 0.15,
-    rootMargin: '0px 0px -100px 0px'
-};
-
-const animateOnScroll = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
-        }
-    });
-}, observerOptions);
-
-// Éléments à animer
-const animatedElements = document.querySelectorAll(`
-    .service-card,
-    .pricing-card,
-    .gallery-item,
-    .about-content,
-    .contact-method
-`);
-
-animatedElements.forEach(el => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(30px)';
-    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-    animateOnScroll.observe(el);
-});
-
 // === EMAILJS INITIALISATION ===
 // Initialisation différée : le SDK est chargé avec defer, il peut ne pas être prêt ici.
 // On initialise dès que possible, et on ré-essaie avant l'envoi si nécessaire.
@@ -287,16 +256,6 @@ function showFormError(message) {
     }, 5000);
 }
 
-// === HERO (parallax désactivé pour ne pas recouvrir l'intro) ===
-const hero = document.querySelector('.hero');
-
-// === SMOOTH REVEAL ON PAGE LOAD ===
-document.body.classList.add('js-loading');
-window.addEventListener('load', () => {
-    document.body.classList.remove('js-loading');
-    document.body.classList.add('js-loaded');
-});
-
 // === GALLERY HOVER EFFECT ===
 const galleryItems = document.querySelectorAll('.gallery-item');
 
@@ -309,49 +268,6 @@ galleryItems.forEach(item => {
         item.style.zIndex = '1';
     });
 });
-
-// === SERVICE CARDS STAGGER ANIMATION ===
-const serviceCards = document.querySelectorAll('.service-card');
-
-serviceCards.forEach((card, index) => {
-    card.style.transitionDelay = `${index * 0.1}s`;
-});
-
-// === CONSOLE LOG PERSONNALISÉ ===
-console.log('%c🌺 ANAPĀ RIMA - Massages Bien-Être', 'font-size: 20px; font-weight: bold; color: #2d4a3e;');
-console.log('%cSite créé avec 💚 pour Victoria Paret', 'font-size: 14px; color: #4a6b5a;');
-console.log('%cRéservations: (+689) 89 51 53 62', 'font-size: 12px; color: #d4a373;');
-
-// === PERFORMANCE OPTIMIZATION ===
-// Lazy loading natif supporté par tous les navigateurs modernes
-// Les images utilisent directement l'attribut loading="lazy" dans le HTML
-
-// === EASTER EGG - KONAMI CODE ===
-let konamiCode = [];
-const konamiPattern = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
-
-document.addEventListener('keydown', (e) => {
-    konamiCode.push(e.key);
-    konamiCode = konamiCode.slice(-10);
-    
-    if (konamiCode.join('') === konamiPattern.join('')) {
-        document.body.style.animation = 'rainbow 2s linear infinite';
-        setTimeout(() => {
-            document.body.style.animation = '';
-            alert('🌺 Mauruuru ! Vous avez trouvé le code secret d\'ANAPA RIMA ! 🌺');
-        }, 2000);
-    }
-});
-
-// Animation rainbow pour l'easter egg
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes rainbow {
-        0% { filter: hue-rotate(0deg); }
-        100% { filter: hue-rotate(360deg); }
-    }
-`;
-document.head.appendChild(style);
 
 // === ACCESSIBILITY IMPROVEMENTS ===
 // Ajouter le focus visible pour la navigation au clavier
@@ -669,82 +585,3 @@ navLinks.forEach(link => {
         }
     });
 });
-
-// === DÉTECTION DU VIEWPORT POUR OPTIMISATIONS ===
-const isMobile = window.innerWidth <= 768;
-const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024;
-
-if (isMobile) {
-    console.log('📱 Mode mobile détecté');
-    // Désactiver certaines animations sur mobile pour les performances
-    document.querySelectorAll('.floating-element').forEach(el => {
-        el.style.display = 'none';
-    });
-}
-
-// === SCROLL TO TOP BUTTON (optionnel) ===
-const scrollToTopBtn = document.createElement('button');
-scrollToTopBtn.innerHTML = '↑';
-scrollToTopBtn.className = 'scroll-to-top';
-scrollToTopBtn.setAttribute('aria-label', 'Retour en haut');
-document.body.appendChild(scrollToTopBtn);
-
-const scrollToTopStyle = document.createElement('style');
-scrollToTopStyle.textContent = `
-    .scroll-to-top {
-        position: fixed;
-        bottom: 2rem;
-        right: 2rem;
-        width: 50px;
-        height: 50px;
-        background: var(--color-secondary);
-        color: white;
-        border: none;
-        border-radius: 50%;
-        font-size: 1.5rem;
-        cursor: pointer;
-        opacity: 0;
-        visibility: hidden;
-        transition: all 0.3s ease;
-        z-index: 999;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-    
-    .scroll-to-top.visible {
-        opacity: 1;
-        visibility: visible;
-    }
-    
-    .scroll-to-top:hover {
-        background: var(--color-primary);
-        transform: translateY(-3px);
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-    }
-    
-    @media (max-width: 768px) {
-        .scroll-to-top {
-            bottom: 1.5rem;
-            right: 1.5rem;
-            width: 45px;
-            height: 45px;
-        }
-    }
-`;
-document.head.appendChild(scrollToTopStyle);
-
-window.addEventListener('scroll', () => {
-    if (window.scrollY > 500) {
-        scrollToTopBtn.classList.add('visible');
-    } else {
-        scrollToTopBtn.classList.remove('visible');
-    }
-});
-
-scrollToTopBtn.addEventListener('click', () => {
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });
-});
-
-console.log('✅ JavaScript ANAPA RIMA chargé avec succès');
