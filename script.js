@@ -339,9 +339,9 @@ document.head.appendChild(accessibilityStyle);
         const mEnd = months[sunday.getMonth()];
         const year = sunday.getFullYear();
         if (monday.getMonth() === sunday.getMonth()) {
-            return `${dStart} – ${dEnd} ${mStart} ${year}`;
+            return `${dStart}-${dEnd} ${mStart} ${year}`;
         }
-        return `${dStart} ${mStart} – ${dEnd} ${mEnd} ${year}`;
+        return `${dStart} ${mStart} - ${dEnd} ${mEnd} ${year}`;
     }
 
     function formatTime(dateStr) {
@@ -460,7 +460,7 @@ document.head.appendChild(accessibilityStyle);
                         ? `<div class="agenda-day-passed">${passedText}</div>`
                         : slots.map(slot => `
                             <div class="agenda-slot ${slot.busy ? 'slot-busy' : 'slot-free'}">
-                                <span class="agenda-slot-time">${slot.startHour}h – ${slot.endHour}h</span>
+                                <span class="agenda-slot-time">${slot.startHour}h-${slot.endHour}h</span>
                                 <span class="agenda-slot-status">${slot.busy ? busyText : availText}</span>
                             </div>
                         `).join('')
@@ -503,7 +503,7 @@ document.head.appendChild(accessibilityStyle);
                 </div>
                 ${slots.map(slot => `
                     <div class="agenda-list-event ${slot.busy ? 'slot-busy' : 'slot-free'}">
-                        <span class="agenda-list-time">${slot.startHour}h – ${slot.endHour}h</span>
+                        <span class="agenda-list-time">${slot.startHour}h-${slot.endHour}h</span>
                         <span class="agenda-list-status">${slot.busy ? busyText : availText}</span>
                     </div>
                 `).join('')}
