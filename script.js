@@ -285,7 +285,7 @@ document.addEventListener('mousedown', () => {
 const accessibilityStyle = document.createElement('style');
 accessibilityStyle.textContent = `
     body.keyboard-nav *:focus {
-        outline: 2px solid #d4a373 !important;
+        outline: 2px solid #5f7a69 !important;
         outline-offset: 2px;
     }
 `;
