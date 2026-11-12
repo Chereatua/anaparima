@@ -145,15 +145,16 @@ const submitBtn = document.getElementById('submitBtn');
 const formSuccess = document.getElementById('formSuccess');
 const newRequestBtn = document.getElementById('newRequestBtn');
 
+// Le formulaire n'existe que sur l'accueil : sur la page Victoria, ces éléments sont absents.
 // Bouton "Nouvelle demande" pour réafficher le formulaire
-newRequestBtn.addEventListener('click', () => {
+newRequestBtn?.addEventListener('click', () => {
     formSuccess.style.display = 'none';
     contactForm.style.display = 'block';
     contactForm.reset();
     if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
 });
 
-contactForm.addEventListener('submit', async (e) => {
+contactForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const formData = new FormData(contactForm);
@@ -420,14 +421,20 @@ document.head.appendChild(accessibilityStyle);
 
     // Découpe la journée (7h-19h) en plages libres / occupées, en minutes depuis minuit.
     // Chaque rendez-vous bloque 15 min avant et après, y compris s'il a commencé avant 7h
-    // ou la veille ; un trou libre de moins d'1h est compté occupé.
+    // ou la veille ; un trou libre de moins d'1h est compté occupé. Aujourd'hui, les
+    // heures déjà passées sont occupées (jusqu'au quart d'heure suivant).
     function buildTimeSlots(events, dayStart) {
         const dayOpen = HOUR_START * 60;
         const dayClose = HOUR_END * 60;
         const toMinutes = ms => (ms - dayStart.getTime()) / 60000;
 
-        const busy = events
-            .map(eventRange)
+        const ranges = events.map(eventRange);
+        if (isToday(dayStart)) {
+            const nowMin = Math.ceil(toMinutes(Date.now()) / 15) * 15;
+            ranges.push({ start: dayStart.getTime(), end: dayStart.getTime() + nowMin * 60000 });
+        }
+
+        const busy = ranges
             .map(r => ({
                 start: Math.max(dayOpen, Math.floor(toMinutes(r.start))),
                 end: Math.min(dayClose, Math.ceil(toMinutes(r.end)))
