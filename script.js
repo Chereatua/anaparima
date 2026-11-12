@@ -317,60 +317,74 @@ document.head.appendChild(accessibilityStyle);
     const MONTHS_FR = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
     const MONTHS_EN = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
+    // Tahiti est à UTC-10 toute l'année (pas d'heure d'été). Tous les calculs se font
+    // à l'heure de Tahiti, quel que soit le fuseau de l'ordinateur du visiteur.
+    const TAHITI_OFFSET_MS = -10 * 3600000;
+    const DAY_MS = 86400000;
+    const MARGIN_MIN = 15;       // marge avant et après chaque rendez-vous
+    const MIN_FREE_MIN = 60;     // un trou plus court qu'un massage d'1h est affiché occupé
+
+    // Date « vue de Tahiti » : lire avec getUTC*()
+    function tahiti(instant) {
+        return new Date(instant.getTime() + TAHITI_OFFSET_MS);
+    }
+
+    // Minuit à Tahiti pour une date du calendrier
+    function tahitiMidnight(year, month, day) {
+        return new Date(Date.UTC(year, month, day) - TAHITI_OFFSET_MS);
+    }
+
+    function tahitiDayStart(instant) {
+        const t = tahiti(instant);
+        return tahitiMidnight(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate());
+    }
+
+    function addDays(dayStart, n) {
+        return new Date(dayStart.getTime() + n * DAY_MS);
+    }
+
     let currentWeekStart = getMonday(new Date());
 
     function getMonday(d) {
-        const date = new Date(d);
-        const day = date.getDay();
-        const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-        date.setDate(diff);
-        date.setHours(0, 0, 0, 0);
-        return date;
+        const dayStart = tahitiDayStart(d);
+        const weekday = tahiti(dayStart).getUTCDay();
+        return addDays(dayStart, weekday === 0 ? -6 : 1 - weekday);
     }
 
     function formatWeekLabel(monday) {
-        const sunday = new Date(monday);
-        sunday.setDate(sunday.getDate() + 6);
+        const mon = tahiti(monday);
+        const sun = tahiti(addDays(monday, 6));
         const l = lang();
         const months = l === 'fr' ? MONTHS_FR : MONTHS_EN;
-        const dStart = monday.getDate();
-        const mStart = months[monday.getMonth()];
-        const dEnd = sunday.getDate();
-        const mEnd = months[sunday.getMonth()];
-        const year = sunday.getFullYear();
-        if (monday.getMonth() === sunday.getMonth()) {
+        const dStart = mon.getUTCDate();
+        const mStart = months[mon.getUTCMonth()];
+        const dEnd = sun.getUTCDate();
+        const mEnd = months[sun.getUTCMonth()];
+        const year = sun.getUTCFullYear();
+        if (mon.getUTCMonth() === sun.getUTCMonth()) {
             return `${dStart}-${dEnd} ${mStart} ${year}`;
         }
         return `${dStart} ${mStart} - ${dEnd} ${mEnd} ${year}`;
     }
 
-    function formatTime(dateStr) {
-        const d = new Date(dateStr);
-        return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Pacific/Tahiti' });
+    // 435 → « 7h15 », 540 → « 9h »
+    function formatMinutes(min) {
+        const h = Math.floor(min / 60);
+        const m = min % 60;
+        return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
     }
 
-    function isSameDay(d1, d2) {
-        return d1.getFullYear() === d2.getFullYear() &&
-               d1.getMonth() === d2.getMonth() &&
-               d1.getDate() === d2.getDate();
+    function isToday(dayStart) {
+        return dayStart.getTime() === tahitiDayStart(new Date()).getTime();
     }
 
-    function isToday(d) {
-        return isSameDay(d, new Date());
-    }
-
-    function isPast(d) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const check = new Date(d);
-        check.setHours(0, 0, 0, 0);
-        return check < today;
+    function isPast(dayStart) {
+        return dayStart < tahitiDayStart(new Date());
     }
 
     async function fetchEvents(weekStart) {
-        const timeMin = new Date(weekStart);
-        const timeMax = new Date(weekStart);
-        timeMax.setDate(timeMax.getDate() + 7);
+        const timeMin = weekStart;
+        const timeMax = addDays(weekStart, 7);
 
         const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(GCAL_CALENDAR_ID)}/events?` +
             `key=${GCAL_API_KEY}` +
@@ -383,52 +397,67 @@ document.head.appendChild(accessibilityStyle);
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`API error ${resp.status}`);
         const data = await resp.json();
-        return data.items || [];
+        return (data.items || []).filter(ev => ev.status !== 'cancelled');
     }
 
-    function getEventsForDay(events, dayDate) {
-        return events.filter(ev => {
-            const start = new Date(ev.start.dateTime || ev.start.date);
-            return isSameDay(start, dayDate);
-        }).filter(ev => {
-            if (ev.start.dateTime) {
-                const h = new Date(ev.start.dateTime).getHours();
-                return h >= HOUR_START && h < HOUR_END;
-            }
-            return true;
-        });
+    // Début et fin d'un événement. Les événements « toute la journée » ont une date
+    // de fin exclusive (2026-11-12 → 2026-11-13) et pas de marge.
+    function eventRange(ev) {
+        if (ev.start.dateTime) {
+            const margin = MARGIN_MIN * 60000;
+            return {
+                start: new Date(ev.start.dateTime).getTime() - margin,
+                end: new Date(ev.end.dateTime).getTime() + margin
+            };
+        }
+        const [ys, ms, ds] = ev.start.date.split('-').map(Number);
+        const [ye, me, de] = ev.end.date.split('-').map(Number);
+        return {
+            start: tahitiMidnight(ys, ms - 1, ds).getTime(),
+            end: tahitiMidnight(ye, me - 1, de).getTime()
+        };
     }
 
-    // Génère les créneaux de la journée (7h-19h), fusionne les consécutifs de même statut
-    function buildTimeSlots(dayEvents) {
+    // Découpe la journée (7h-19h) en plages libres / occupées, en minutes depuis minuit.
+    // Chaque rendez-vous bloque 15 min avant et après, y compris s'il a commencé avant 7h
+    // ou la veille ; un trou libre de moins d'1h est compté occupé.
+    function buildTimeSlots(events, dayStart) {
+        const dayOpen = HOUR_START * 60;
+        const dayClose = HOUR_END * 60;
+        const toMinutes = ms => (ms - dayStart.getTime()) / 60000;
+
+        const busy = events
+            .map(eventRange)
+            .map(r => ({
+                start: Math.max(dayOpen, Math.floor(toMinutes(r.start))),
+                end: Math.min(dayClose, Math.ceil(toMinutes(r.end)))
+            }))
+            .filter(r => r.start < r.end)
+            .sort((a, b) => a.start - b.start);
+
         const slots = [];
-        for (let h = HOUR_START; h < HOUR_END; h++) {
-            slots.push({ hour: h, busy: false });
-        }
-        dayEvents.forEach(ev => {
-            if (!ev.start.dateTime) {
-                slots.forEach(s => { s.busy = true; });
-                return;
+        let cursor = dayOpen;
+        const pushSlot = (start, end, isBusy) => {
+            const last = slots[slots.length - 1];
+            if (last && last.busy === isBusy) {
+                last.end = Math.max(last.end, end);
+            } else {
+                slots.push({ start, end, busy: isBusy });
             }
-            const startH = new Date(ev.start.dateTime).getHours();
-            const endH = new Date(ev.end.dateTime).getHours();
-            const endM = new Date(ev.end.dateTime).getMinutes();
-            for (let h = startH; h < endH + (endM > 0 ? 1 : 0); h++) {
-                const slot = slots.find(s => s.hour === h);
-                if (slot) slot.busy = true;
+        };
+        const addFree = (start, end) => {
+            if (end > start) pushSlot(start, end, end - start < MIN_FREE_MIN);
+        };
+
+        busy.forEach(r => {
+            addFree(cursor, r.start);
+            if (r.end > cursor) {
+                pushSlot(Math.max(cursor, r.start), r.end, true);
+                cursor = r.end;
             }
         });
-        // Fusionner les créneaux consécutifs de même statut
-        const merged = [];
-        for (const slot of slots) {
-            const last = merged[merged.length - 1];
-            if (last && last.busy === slot.busy) {
-                last.endHour = slot.hour + 1;
-            } else {
-                merged.push({ startHour: slot.hour, endHour: slot.hour + 1, busy: slot.busy });
-            }
-        }
-        return merged;
+        addFree(cursor, dayClose);
+        return slots;
     }
 
     function renderWeekView(events) {
@@ -439,28 +468,27 @@ document.head.appendChild(accessibilityStyle);
         const busyText = l === 'fr' ? 'Occupée' : 'Booked';
 
         for (let i = 0; i < 7; i++) {
-            const dayDate = new Date(currentWeekStart);
-            dayDate.setDate(dayDate.getDate() + i);
+            const dayDate = addDays(currentWeekStart, i);
+            const dayLocal = tahiti(dayDate);
 
             const past = isPast(dayDate);
             const dayEl = document.createElement('div');
             dayEl.className = 'agenda-day' + (isToday(dayDate) ? ' today' : '') + (past ? ' past' : '');
 
-            const dayEvents = getEventsForDay(events, dayDate);
-            const slots = buildTimeSlots(dayEvents);
+            const slots = buildTimeSlots(events, dayDate);
             const passedText = l === 'fr' ? 'Passé' : 'Past';
 
             dayEl.innerHTML = `
                 <div class="agenda-day-header">
-                    <div class="agenda-day-name">${dayNames[dayDate.getDay()]}</div>
-                    <div class="agenda-day-number">${dayDate.getDate()}</div>
+                    <div class="agenda-day-name">${dayNames[dayLocal.getUTCDay()]}</div>
+                    <div class="agenda-day-number">${dayLocal.getUTCDate()}</div>
                 </div>
                 <div class="agenda-day-events">
                     ${past
                         ? `<div class="agenda-day-passed">${passedText}</div>`
                         : slots.map(slot => `
                             <div class="agenda-slot ${slot.busy ? 'slot-busy' : 'slot-free'}">
-                                <span class="agenda-slot-time">${slot.startHour}h-${slot.endHour}h</span>
+                                <span class="agenda-slot-time">${formatMinutes(slot.start)}-${formatMinutes(slot.end)}</span>
                                 <span class="agenda-slot-status">${slot.busy ? busyText : availText}</span>
                             </div>
                         `).join('')
@@ -482,11 +510,10 @@ document.head.appendChild(accessibilityStyle);
         const busyText = l === 'fr' ? 'Occupée' : 'Booked';
 
         for (let i = 0; i < 7; i++) {
-            const dayDate = new Date(currentWeekStart);
-            dayDate.setDate(dayDate.getDate() + i);
+            const dayDate = addDays(currentWeekStart, i);
+            const dayLocal = tahiti(dayDate);
 
-            const dayEvents = getEventsForDay(events, dayDate);
-            const slots = buildTimeSlots(dayEvents);
+            const slots = buildTimeSlots(events, dayDate);
             const today = isToday(dayDate);
             const past = isPast(dayDate);
 
@@ -498,12 +525,12 @@ document.head.appendChild(accessibilityStyle);
 
             dayEl.innerHTML = `
                 <div class="agenda-list-header">
-                    ${dayNames[dayDate.getDay()]} ${dayDate.getDate()} ${months[dayDate.getMonth()]}
+                    ${dayNames[dayLocal.getUTCDay()]} ${dayLocal.getUTCDate()} ${months[dayLocal.getUTCMonth()]}
                     ${today ? `<span class="today-badge">${todayText}</span>` : ''}
                 </div>
                 ${slots.map(slot => `
                     <div class="agenda-list-event ${slot.busy ? 'slot-busy' : 'slot-free'}">
-                        <span class="agenda-list-time">${slot.startHour}h-${slot.endHour}h</span>
+                        <span class="agenda-list-time">${formatMinutes(slot.start)}-${formatMinutes(slot.end)}</span>
                         <span class="agenda-list-status">${slot.busy ? busyText : availText}</span>
                     </div>
                 `).join('')}
@@ -542,16 +569,15 @@ document.head.appendChild(accessibilityStyle);
     }
 
     agendaPrev.addEventListener('click', () => {
-        const prevWeek = new Date(currentWeekStart);
-        prevWeek.setDate(prevWeek.getDate() - 7);
+        const prevWeek = addDays(currentWeekStart, -7);
         if (prevWeek < thisWeekMonday) return;
-        currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+        currentWeekStart = prevWeek;
         updatePrevButton();
         loadWeek();
     });
 
     agendaNext.addEventListener('click', () => {
-        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+        currentWeekStart = addDays(currentWeekStart, 7);
         updatePrevButton();
         loadWeek();
     });
