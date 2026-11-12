@@ -724,6 +724,8 @@ html[lang="fr"] .lang-en { display: none !important; }
 .agenda {
     padding: var(--spacing-xl) 0;
     background: rgba(245, 241, 235, 0.55);
+    position: relative;
+    z-index: 2;
 }
 
 .agenda-subtitle {
@@ -788,18 +790,19 @@ html[lang="fr"] .lang-en { display: none !important; }
 }
 
 .agenda-day {
-    background: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.95);
     min-height: 120px;
     padding: var(--spacing-sm);
     display: flex;
     flex-direction: column;
 }
 
+/* Teintes opaques : le logo en fond ne doit pas transparaître dans l'agenda */
 .agenda-day.today {
-    background: rgba(95, 122, 105, 0.1);
+    background: #eff2f0;
 }
 
-.agenda-day.past {
+.agenda-day.past > * {
     opacity: 0.4;
 }
 
@@ -896,7 +899,7 @@ html[lang="fr"] .lang-en { display: none !important; }
 }
 
 .agenda-list-day {
-    background: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 10px;
     padding: var(--spacing-sm) var(--spacing-md);
     border: 1px solid rgba(45, 74, 62, 0.1);
@@ -1423,6 +1426,8 @@ html[lang="fr"] .lang-en { display: none !important; }
 .diplomes {
     padding: var(--spacing-xl) 0;
     background: transparent;
+    position: relative;
+    z-index: 2;
 }
 
 .diplomes-grid {
